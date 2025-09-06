@@ -1,0 +1,1 @@
+my solutions for wintermute alpha challange 2025. https://alpha.wintermute.com/
