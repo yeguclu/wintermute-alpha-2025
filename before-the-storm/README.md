@@ -1,72 +1,46 @@
 
-Before the storm
-UwU Lend was drained for $20M a few days ago, and you found that the exploiter’s(https://etherscan.io/address/0x6F8C5692b00c2eBbd07e4FD80E332DfF3ab8E83c) Llamalend position became unhealthy, so it’s time to liquidate it. You have no capital at the moment, so the only way to do it is by using a flash loan.
+# Before the Storm - Flash Loan Liquidation
 
-Do whatever it takes to have at least 20k CRV in your registered wallet after the liquidation.
+## Challenge Description
 
-## Foundry
+UwU Lend was drained for $20M a few days ago, and the exploiter's [Llamalend position](https://etherscan.io/address/0x6F8C5692b00c2eBbd07e4FD80E332DfF3ab8E83c) became unhealthy. The goal is to liquidate it using a flash loan and end up with at least 20k CRV in the registered wallet.
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## Solution Overview
 
-Foundry consists of:
+This solution implements a sophisticated flash loan liquidation strategy that:
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+1. **Balancer Vault** for flash loans (USDC)
+2. **Implements partial liquidation** since the position couldn't be liquidated at once
+3. **Optimizes token swaps** across multiple DEXs for maximum efficiency
 
-## Documentation
+## Key Features
 
-https://book.getfoundry.sh/
+### Partial Liquidation Strategy
+- Uses `liquidate_extended()` with a small fraction (1%) to avoid liquidation failures
+- Dynamically calculates the required crvUSD amount based on the liquidation fraction
 
-## Usage
+### Multi-DEX Routing
+- **Curve pools**: crvUSD/USDC and triCRV (CRV/crvUSD/WETH)
+- **Uniswap V3**: WETH/USDC (0.05% fee tier)
+- **Split routing**: Half CRV → crvUSD → USDC, half CRV → WETH → USDC
 
-### Build
+## Strategy Details
 
-```shell
-$ forge build
-```
+### 1. Flash Loan Setup
+- Borrows USDC from Balancer Vault
+- No fees (fee == 0 check ensures this)
+- Calculates optimal amount needed for liquidation
 
-### Test
+### 2. Liquidation Execution
+- Swaps USDC → crvUSD via Curve crvUSD/USDC pool
+- Calls `liquidate_extended()` with 1% fraction
+- Converts leftover crvUSD back to USDC
 
-```shell
-$ forge test
-```
+### 3. CRV Profit Extraction
+- Sells received CRV collateral in small chunks
+- Uses both triCRV routes (CRV→crvUSD→USDC and CRV→WETH→USDC)
+- Continues until sufficient USDC for repayment
 
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+### 4. Profit Distribution
+- Repays flash loan to Balancer Vault
+- Transfers remaining CRV to beneficiary address
